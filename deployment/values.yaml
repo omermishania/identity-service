@@ -1,0 +1,18 @@
+# Values specific to this service only
+
+service_name: "identity"
+
+liveness: "/live"
+livenessInitialDelaySeconds: 15
+livenessTimeoutSeconds: 1
+
+readiness: "/ready"
+readinessInitialDelaySeconds: 15
+readinessTimeoutSeconds: 5
+
+port: 4443
+log_level: "INFO"
+log_format: "%(levelname)s %(asctime)s - %(message)s"
+
+openapi_path: "api"
+openapi_file_name: "openapi.yaml"

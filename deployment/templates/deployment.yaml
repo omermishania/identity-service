@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- $serviceName := "identity" }}  # Change this to the service name from services list in values inside the environments values
+
+  {{- range .Values.services }}
+  {{- if eq .name $serviceName }}
+
+  name: {{ .name }}-deployment  # Taken from env specific values
+  namespace: {{ $.Release.Namespace }}
+spec:
+  replicas: {{ .replicas }} # Taken from env specific values
+  selector:
+    matchLabels:
+      svc: {{ .name }} # Taken from env specific values
+  template:
+    metadata:
+      labels:
+        svc: {{ .name }} # Taken from env specific values
+    spec:
+      {{- if $.Values.global.wib.image_pull_secrets }}
+      imagePullSecrets:
+      - name: {{ $.Values.global.wib.image_pull_secrets }}
+      {{- end }}
+      serviceAccountName: secret-creator
+      containers:
+      - name: {{ .name }} # Taken from env specific values
+        image: {{ .image }} # Taken from env specific values
+        livenessProbe:
+          httpGet:
+            path: {{ $.Values.liveness }}
+            port: {{ $.Values.port }}
+            scheme: HTTP
+          initialDelaySeconds: {{ $.Values.livenessInitialDelaySeconds }}
+          timeoutSeconds: {{ $.Values.livenessTimeoutSeconds }}
+        startupProbe:
+          httpGet:
+            path: {{ $.Values.readiness }}
+            port: {{ $.Values.port }}
+            scheme: HTTP
+          initialDelaySeconds: {{ $.Values.readinessInitialDelaySeconds }}
+          timeoutSeconds: {{ $.Values.readinessTimeoutSeconds }}
+
+        resources:
+          requests:
+            memory: {{ .resources.requests.memory }} # Taken from env specific values
+            cpu: {{ .resources.requests.cpu }} # Taken from env specific values
+          limits:
+            memory: {{ .resources.limits.memory }} # Taken from env specific values
+        imagePullPolicy: Always
+        envFrom:
+          - configMapRef:
+              name: {{ .name }}-configmap # Taken from env specific values
+        env:
+          - name: SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ $.Values.global.wib.identity_secret_key_secret_name }}
+                key: {{ $.Values.global.wib.identity_secret_key_secret_key }}
+        ports:
+        - containerPort: {{ .port | default "80" }}  # Assuming a default port, update if necessary
+
+  {{- end }}
+  {{- end }}
